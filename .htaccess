@@ -1,0 +1,12 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /projects/Meek/
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /projects/Meek/index.php [L]
+</IfModule>
+
+<files "*.json"> 
+  Order deny,allow
+  Deny from all
+</files>
