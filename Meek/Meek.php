@@ -45,10 +45,6 @@ class Meek {
     
     // Render
     $this->page();
-    
-    // DEBUG
-    $this->_dbg($this->page);
-    $this->_dbg($this->template);
   }
   
   // INITIALIZATION SEQUENCE
