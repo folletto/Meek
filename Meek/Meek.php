@@ -155,13 +155,18 @@ class Meek {
   	 * 
   	 * @return	output of the function
   	 */
+  	$root = rtrim(dirname($_SERVER['PHP_SELF']), '/') . '/';
   	extract($this->cfg);
   	
   	$partials = $this->read_partials(file_get_contents($this->page), "body");
+  	foreach ($partials as $key => $partial) {
+  	  $partials[$key] = $this->getOutputOf(array($this, "render_partial"), $partial);
+  	}
   	extract($partials);
-  	// eval() partials?
   	
-  	// get template, explode simpletags <?tag> after php inclusion run (WHAT??? ARE YOU KIDDING???!?)
+  	// TODO: Filter paths to automatically handle them
+  	// TODO: Find a way to allow "simpletags" <?tag> in Templates
+  	
   	include $this->template;
 	}
 	function read_partials($string, $read_header = null) {
@@ -203,25 +208,18 @@ class Meek {
 		
 		return $out;
 	}
-	function render() {
+	function render_partial($code) {
 	  /****************************************************************************************************
-  	 * Partials Array Renderer
-  	 * Renderer for the render() loop.
+  	 * Just wraps eval to be able to use it with getOutoutOf()
   	 * 
-  	 * @param	partial name
-  	 * @param	item array
+  	 * @param		partial to be executed
   	 */
-		// *** Preparing some variables in order to be usable easily in the page
-		$root = rtrim(dirname($_SERVER['PHP_SELF']), '/') . '/';
-		// *** Of course, also the user array must be extract()ed
-		extract($item);
-		
-		// *** Evaluates the string
-		$code = $this->partials[$partial];
-		$code = $this->context->filter('template', $code);
-		
-		// partials are HTML mainly, so we close the php tags before evaluating.
-		eval(' ?' . '>' . $code . '<' . '?php ');
+  	$root = rtrim(dirname($_SERVER['PHP_SELF']), '/') . '/';
+  	extract($this->cfg);
+  	
+  	// TODO: Filter paths to automatically handle them
+  	
+	  eval(' ?' . '>' . $code . '<' . '?php ');
 	}
 	
 	// SUPPORT
