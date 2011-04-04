@@ -45,6 +45,10 @@ class Meek {
     
     // Render
     $this->page();
+    
+    // DEBUG
+    $this->_dbg($this->page);
+    $this->_dbg($this->template);
   }
   
   // INITIALIZATION SEQUENCE
@@ -97,6 +101,7 @@ class Meek {
   				if (file_exists($path)) {
   				  // ****** Got it!
   				  $this->template = $path;
+  				  break;
   			  }
   		  }
   		}
