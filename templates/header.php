@@ -15,3 +15,4 @@
   <link rel="apple-touch-startup-image" href="ios-splash-320x460.png" />
 <head>
 <body>
+  <h1><?php echo $h1; ?></h1>
