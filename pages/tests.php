@@ -16,5 +16,10 @@ Some environment variables initialised by Meek:
   <li>$title: <?php echo $title; ?> </li>
 </ul>
 
+<ul>
+  <li>Rewrite doesn't affect HTTP(S): urls: <a href="http://github.com/Folletto/Meek">test</a></li>
+  <li>Rewrite doesn't affect MAILTO: urls: <a href="mailto:test@example.org">test</a></li>
+</ul>
+
 :h1
 Me Testing Meek!
