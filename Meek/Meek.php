@@ -77,7 +77,8 @@ class Meek {
   var $virtual_uri = null; // Virtual URI, ie: "http://example.org/apppath/virtual/path?moo=42" => array("virtual", "path")
   
   var $template = null; // Active template path, ie: "../templates/tpl.sub.php"
-  var $page = null; 
+  var $page = null;
+  var $partials = array();
   
   var $cfg = array();
   var $db = array();
@@ -96,11 +97,11 @@ class Meek {
     }
     
     // Initialize Virtual URI
-    $this->virtual_uri();
+    $this->virtual_uri = $this->virtual_uri();
     
     // Select
-    $this->select_template($this->local_root . $this->TEMPLATES . "/");
-    $this->select_page($this->local_root . $this->PAGES. "/");
+    $this->template = $this->select_template($this->local_root . $this->TEMPLATES . "/", $this->virtual_uri);
+    $this->page = $this->select_page($this->local_root . $this->PAGES. "/", $this->virtual_uri);
     
     // Render
     $this->page();
@@ -115,26 +116,26 @@ class Meek {
   	 * 
   	 * @return	parsed virtual URI array
   	 */
-		if (!is_array($this->virtual_uri)) {
-			// ****** Prepare the variables to be matched
-			$self = str_replace(" ", "%20", rtrim(dirname($_SERVER['PHP_SELF']), '/') . '/');	// relative self path
-			$uri = $_SERVER['REQUEST_URI'];						// user requested URI
-			
-			// *** Split path from query
-			$relevant = str_replace(':' . $self, '', ':' . $uri);		// get just the 'fake' part (remove $self from $uri)
-			@list($path, $query) = explode('?', $relevant);	// split 'fake' part from query
-			
-			// ****** Prepare the array
-			if (strlen($path) > 0) {
-			  $this->virtual_uri = explode('/', $path);
-		  } else {
-		    $this->virtual_uri = array('index');
-		  }
-		}
+  	$out = '';
+  	
+		// ****** Prepare the variables to be matched
+		$self = str_replace(" ", "%20", rtrim(dirname($_SERVER['PHP_SELF']), '/') . '/');	// relative self path
+		$uri = $_SERVER['REQUEST_URI'];						// user requested URI
 		
-		return $this->virtual_uri;
+		// *** Split path from query
+		$relevant = str_replace(':' . $self, '', ':' . $uri); // get just the 'fake' part (remove $self from $uri)
+		@list($path, $query) = explode('?', $relevant);	// split 'fake' part from query
+		
+		// ****** Prepare the array
+		if (strlen($path) > 0) {
+		  $out = explode('/', $path);
+	  } else {
+	    $out = array('index');
+	  }
+		
+		return $out;
 	}
-	function select_template($templates) {
+	function select_template($templates, $virtual_uri) {
 	  /****************************************************************************************************
   	 * Select the active template file from implicit file hierarchy.
   	 * Hierarchy:
@@ -146,29 +147,31 @@ class Meek {
   	 * @param	  templates folder
   	 * @return  choosen template path
   	 */
+  	$out = '';
+  	
   	if (is_dir($templates)) {
-  	  if (is_array($this->virtual_uri) && sizeof($this->virtual_uri) > 0) {
+  	  if (is_array($virtual_uri) && sizeof($virtual_uri) > 0) {
   			// ****** Read template hierarchy
-  			for ($i = sizeof($this->virtual_uri); $i > 0; $i--) {
-  				$name = join('.', array_slice($this->virtual_uri, 0, $i));
+  			for ($i = sizeof($virtual_uri); $i > 0; $i--) {
+  				$name = join('.', array_slice($virtual_uri, 0, $i));
   				$path = $templates . 'tpl.' . $name . '.php';
 
   				if (file_exists($path)) {
   				  // ****** Got it!
-  				  $this->template = $path;
+  				  $out = $path;
   				  break;
   			  }
   		  }
   		}
-  		if (!$this->template) {
+  		if (!$out) {
   		  // ****** If no Virtual URI was set or no matching template was found
-  		  $this->template = $templates . 'tpl.php';
+  		  $out = $templates . 'tpl.php';
   		}
   	}
 		
-		return $this->template;
+		return $out;
 	}
-	function select_page($pages) {
+	function select_page($pages, $virtual_uri) {
 	  /****************************************************************************************************
   	 * Select the active page file from implicit file hierarchy.
   	 * Hierarchy:
@@ -181,31 +184,33 @@ class Meek {
   	 * @param	  pages folder
   	 * @return  choosen page path
   	 */
+  	$out = '';
+  	
   	if (is_dir($pages)) {
-  	  if (is_array($this->virtual_uri) && sizeof($this->virtual_uri) > 0) {
+  	  if (is_array($virtual_uri) && sizeof($virtual_uri) > 0) {
     		// ****** Read pages hierarchy
-    		for ($i = sizeof($this->virtual_uri); $i > 0; $i--) {
-    			$name = join('.', array_slice($this->virtual_uri, 0, $i));
+    		for ($i = sizeof($virtual_uri); $i > 0; $i--) {
+    			$name = join('.', array_slice($virtual_uri, 0, $i));
     			$path = $pages . $name . '.php';
 
     			if (file_exists($path)) {
     			  // ****** Got it!
-    			  $this->page = $path;
+    			  $out = $path;
     			  break;
     		  }
     	  }
     	  
-    	  if (!$this->page) {
+    	  if (!$out) {
     	    // ****** The matching page wasn't found
-    	    $this->page = $pages . '404.php';
+    	    $out = $pages . '404.php';
     	  }
   		} else {
   		  // ****** Open default
-  		  $this->page = $pages . 'index.php';
+  		  $out = $pages . 'index.php';
   		}
   	}
 		
-		return $this->page;
+		return $out;
 	}
 	function page() {
 	  /****************************************************************************************************
@@ -213,11 +218,18 @@ class Meek {
   	 * 
   	 * @return	output of the function
   	 */
-  	$this->renderer(); // ...where the magic is done
+  	// *** Getting the string in order to post-process its html
+  	$page = $this->getOutputOf(array($this, "renderer")); // $this->renderer();
+    
+    // *** Process
+    $page = $this->filterTemplate($page);
+    
+    // *** Output
+    echo $page;
 	}
 	
 	// RENDER
-	function renderer($mode = '', $item = '') {
+	function renderer($str = '') {
 	  /****************************************************************************************************
   	 * Rendering function.
   	 * If mode and item are empty, then it renders the current page with template.
@@ -233,36 +245,28 @@ class Meek {
   	extract($this->cfg);
   	
   	// ****** Output block
-	  if ($mode == 'string' && $item) {
+	  if ($str) {
 	    // ******************************************************************************************
-  	  // (3) STRING RENDERING
+  	  // (2) STRING RENDERING
   	  
-  	  eval(' ?' . '>' . $item); // reopening the php tag seems not required...
+  	  extract($this->partials); // make previous partials available to following ones
   	  
-	  } else if ($mode == 'path' && $item) {
+  	  eval(' ?' . '>' . $str); // reopening the php tag seems not required...
+  	  
+	  } else {
 	    // ******************************************************************************************
-	    // (2) TEMPLATE RENDERING
+	    // (1) TEMPLATE RENDERING
 	    
-	    $partials = $this->read_partials(file_get_contents($this->page), "body");
-    	foreach ($partials as $key => $partial) {
-    	  $partials[$key] = $this->getOutputOf(array($this, "renderer"), 'string', $partial);
+	    $this->partials = $this->read_partials(file_get_contents($this->page), "body");
+    	foreach ($this->partials as $key => $partial) {
+    	  // Using variable-from-string $$key in order to make the item directly accessible from the page
+    	  $$key = $this->getOutputOf(array($this, "renderer"), $partial); // $this->renderer($partial);
+    	  $this->partials[$key] = $$key;
     	}
-    	extract($partials);
       
-  	  include $item;
+  	  include $this->template;
   	  
-    } else {
-      // ******************************************************************************************
-  	  // (1) GENERATE PAGE
-  	  
-      $page = $this->getOutputOf(array($this, "renderer"), 'path', $this->template);
-      
-      // *** Process
-      $page = $this->filterTemplate($page);
-      
-      // *** Output
-      echo $page;
-  	}
+    }
 	}
 	function read_partials($string, $read_header = null) {
 	  /****************************************************************************************************
