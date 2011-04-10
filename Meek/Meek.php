@@ -15,7 +15,8 @@ class Meek {
   var $PAGES = "pages";
   var $TEMPLATES = "templates";
   
-  var $self_root = ""; // Script root, ie: "./"
+  var $web_root = "";
+  var $local_root = ""; // Script root, ie: "./"
   var $virtual_uri = null; // Virtual URI, ie: "http://example.org/apppath/virtual/path?moo=42" => array("virtual", "path")
   
   var $template = null; // Active template path, ie: "../templates/tpl.sub.php"
@@ -29,19 +30,20 @@ class Meek {
     /****************************************************************************************************
      * Initialize
      */
-    $this->self_root = rtrim($root, "/") . "/";
+    $this->local_root = rtrim($root, "/") . "/";
+    $this->web_root = rtrim(dirname($_SERVER['PHP_SELF']), '/') . '/';
     
     // Read configuration file
-    if (file_exists($this->self_root . $this->CFG)) {
-      $this->cfg = json_decode(file_get_contents($this->self_root . $this->CFG), true);
+    if (file_exists($this->local_root . $this->CFG)) {
+      $this->cfg = json_decode(file_get_contents($this->local_root . $this->CFG), true);
     }
     
     // Initialize Virtual URI
     $this->virtual_uri();
     
     // Select
-    $this->select_template($this->self_root . $this->TEMPLATES . "/");
-    $this->select_page($this->self_root . $this->PAGES. "/");
+    $this->select_template($this->local_root . $this->TEMPLATES . "/");
+    $this->select_page($this->local_root . $this->PAGES. "/");
     
     // Render
     $this->page();
@@ -148,27 +150,62 @@ class Meek {
 		
 		return $this->page;
 	}
-	
-	// RENDER
 	function page() {
 	  /****************************************************************************************************
   	 * Renders the current page
   	 * 
   	 * @return	output of the function
   	 */
-  	$root = rtrim(dirname($_SERVER['PHP_SELF']), '/') . '/';
+  	$this->renderer(); // ...where the magic is done
+	}
+	
+	// RENDER
+	function renderer($mode = '', $item = '') {
+	  /****************************************************************************************************
+  	 * Rendering function.
+  	 * If mode and item are empty, then it renders the current page with template.
+  	 * 
+  	 * NOTE: this function is tricky because we need to perfom output buffering and setting common 
+  	 *       variables once. Don't try to split it unless you understand this.
+  	 * 
+  	 * @param		mode
+  	 * @param   partial string to be parsed and rendered || path to the template
+  	 */
+  	// ****** Environment initialization
+	  $root = $this->web_root;
   	extract($this->cfg);
   	
-  	$partials = $this->read_partials(file_get_contents($this->page), "body");
-  	foreach ($partials as $key => $partial) {
-  	  $partials[$key] = $this->getOutputOf(array($this, "render_partial"), $partial);
+  	// ****** Output block
+	  if ($mode == 'string' && $item) {
+	    // ******************************************************************************************
+  	  // (3) STRING RENDERING
+  	  
+  	  eval(' ?' . '>' . $item); // reopening the php tag seems not required...
+  	  
+	  } else if ($mode == 'path' && $item) {
+	    // ******************************************************************************************
+	    // (2) TEMPLATE RENDERING
+	    
+	    $partials = $this->read_partials(file_get_contents($this->page), "body");
+    	foreach ($partials as $key => $partial) {
+    	  $partials[$key] = $this->getOutputOf(array($this, "renderer"), 'string', $partial);
+    	}
+    	extract($partials);
+      
+  	  include $item;
+  	  
+    } else {
+      // ******************************************************************************************
+  	  // (1) GENERATE PAGE
+  	  
+      $page = $this->getOutputOf(array($this, "renderer"), 'path', $this->template);
+      
+      // *** Process
+      $page = $this->filterTemplate($page);
+      
+      // *** Output
+      echo $page;
   	}
-  	extract($partials);
-  	
-  	// TODO: Filter paths to automatically handle them
-  	// TODO: Find a way to allow "simpletags" <?tag> in Templates
-  	
-  	include $this->template;
 	}
 	function read_partials($string, $read_header = null) {
 	  /****************************************************************************************************
@@ -209,18 +246,24 @@ class Meek {
 		
 		return $out;
 	}
-	function render_partial($code) {
+	function filterTemplate($text) {
 	  /****************************************************************************************************
-  	 * Just wraps eval to be able to use it with getOutoutOf()
+  	 * Template filter to allow path addressing working.
+  	 * This function converts relative URLs to live app URLs.
   	 * 
-  	 * @param		partial to be executed
+  	 * @param	input text
+  	 * @return	output relativized text
   	 */
-  	$root = rtrim(dirname($_SERVER['PHP_SELF']), '/') . '/';
-  	extract($this->cfg);
-  	
-  	// TODO: Filter paths to automatically handle them
-  	
-	  eval(' ?' . '>' . $code . '<' . '?php ');
+		$out = $text;
+		
+		// ****** Prepare
+		$root = $this->web_root;
+		
+		// ****** Relativize
+		$out = preg_replace('/<a(.*)href="((?!http).*)"/i', '<a$1href="' . $root . '$2"', $out);
+		//$out = preg_replace('/<form(.*)action="((?!http).*)"/i', '<form$1action="' . $path . '$2"', $out);
+		
+		return $out;
 	}
 	
 	// SUPPORT
@@ -233,15 +276,16 @@ class Meek {
   	 */
 		$out = '';
 		
-		ob_flush();
-		
-		$args = func_get_args();
-		array_shift($args);
-		
-		call_user_func_array($fx, $args);
-		
-		$out = ob_get_contents();
-		ob_clean();
+		if (ob_start()) { // BEGIN nested buffer		
+  		$args = func_get_args();
+  		array_shift($args); // remove the function name to be called from the array
+		  
+  		call_user_func_array($fx, $args);
+		  
+  		$out = ob_get_contents();
+  		
+  		ob_end_clean(); // END nested buffer
+	  }
 		
 		return $out;
 	}
