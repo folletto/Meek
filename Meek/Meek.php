@@ -328,8 +328,8 @@ class Meek {
 		
 		// ****** Relativize link, img and scripts
 		$out = preg_replace('/<link(.*)href="(?!http)\/?(.*)"/i', '<link$1href="' . $templates_uri . '$2"', $out);
-		$out = preg_replace('/<img(.*)src="(?!http)\/?(.*)"/i', '<img$1src="' . $root . '$2"', $out);
-		$out = preg_replace('/<script(.*)src="(?!http)\/?(.*)"/i', '<script$1src="' . $root . '$2"', $out);
+		$out = preg_replace('/<img(.*)src="(?!http)\/?(.*)"/i', '<img$1src="' . $templates_uri . '$2"', $out);
+		$out = preg_replace('/<script(.*)src="(?!http)\/?(.*)"/i', '<script$1src="' . $templates_uri . '$2"', $out);
 		
 		// ****** Relativize pages navigation
 		$out = preg_replace('/<a(.*)href="(?!http:|https:|mailto:|tel:|skype:)\/?(.*)"/i', '<a$1href="' . $root . '$2"', $out);
