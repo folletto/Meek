@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   
   <!-- \/ Template -->
-  <link rel="stylesheet" href="template.css" type="text/css" media="all" /> 
+  <link rel="stylesheet" href="style.css" type="text/css" media="all" /> 
   <link rel="apple-touch-icon" href="ios-icon-72x72.png"/>
   <link rel="apple-touch-startup-image" href="ios-splash-320x460.png" />
 <head>

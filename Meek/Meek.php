@@ -88,22 +88,26 @@ class Meek {
     /****************************************************************************************************
      * Initialize
      */
+    // ****** Normalize
+    $this->PAGES = rtrim($this->PAGES, "/") . "/";
+    $this->TEMPLATES = rtrim($this->TEMPLATES, "/") . "/";
+    
     $this->local_root = rtrim($root, "/") . "/";
     $this->web_root = rtrim(dirname($_SERVER['PHP_SELF']), '/') . '/';
     
-    // Read configuration file
+    // ****** Read configuration file
     if (file_exists($this->local_root . $this->CFG)) {
       $this->cfg = json_decode(file_get_contents($this->local_root . $this->CFG), true);
     }
     
-    // Initialize Virtual URI
+    // ****** Initialize Virtual URI
     $this->virtual_uri = $this->virtual_uri();
     
-    // Select
-    $this->template = $this->select_template($this->local_root . $this->TEMPLATES . "/", $this->virtual_uri);
-    $this->page = $this->select_page($this->local_root . $this->PAGES. "/", $this->virtual_uri);
+    // ****** Select
+    $this->template = $this->select_template($this->local_root . $this->TEMPLATES, $this->virtual_uri);
+    $this->page = $this->select_page($this->local_root . $this->PAGES, $this->virtual_uri);
     
-    // Render
+    // ****** Render
     $this->page();
   }
   
@@ -307,7 +311,7 @@ class Meek {
 		
 		return $out;
 	}
-	function filterTemplate($text) {
+	function filterTemplate($out) {
 	  /****************************************************************************************************
   	 * Template filter to allow path addressing working.
   	 * This function converts relative URLs to live app URLs.
@@ -315,13 +319,20 @@ class Meek {
   	 * @param	input text
   	 * @return	output relativized text
   	 */
-		$out = $text;
-		
 		// ****** Prepare
 		$root = $this->web_root;
+		$templates_uri = $this->web_root . $this->TEMPLATES;
 		
-		// ****** Relativize
-		$out = preg_replace('/<a(.*)href="((?!http:|https:|mailto:|tel:|skype:).*)"/i', '<a$1href="' . $root . '$2"', $out);
+		// ****** Smart variables parsing
+		/*$out = preg_replace('/\<\$(\w+)\>/', '<?php echo \$$1; ?>', $out); /**/
+		
+		// ****** Relativize link, img and scripts
+		$out = preg_replace('/<link(.*)href="(?!http)\/?(.*)"/i', '<link$1href="' . $templates_uri . '$2"', $out);
+		$out = preg_replace('/<img(.*)src="(?!http)\/?(.*)"/i', '<img$1src="' . $root . '$2"', $out);
+		$out = preg_replace('/<script(.*)src="(?!http)\/?(.*)"/i', '<script$1src="' . $root . '$2"', $out);
+		
+		// ****** Relativize pages navigation
+		$out = preg_replace('/<a(.*)href="(?!http:|https:|mailto:|tel:|skype:)\/?(.*)"/i', '<a$1href="' . $root . '$2"', $out);
 		//$out = preg_replace('/<form(.*)action="((?!http).*)"/i', '<form$1action="' . $path . '$2"', $out);
 		
 		return $out;
