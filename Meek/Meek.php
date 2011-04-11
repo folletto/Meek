@@ -226,7 +226,7 @@ class Meek {
   	$page = $this->getOutputOf(array($this, "renderer")); // $this->renderer();
     
     // *** Process
-    $page = $this->filterTemplate($page);
+    $page = $this->filter_template($page);
     
     // *** Output
     echo $page;
@@ -311,7 +311,7 @@ class Meek {
 		
 		return $out;
 	}
-	function filterTemplate($out) {
+	function filter_template($out) {
 	  /****************************************************************************************************
   	 * Template filter to allow path addressing working.
   	 * This function converts relative URLs to live app URLs.
