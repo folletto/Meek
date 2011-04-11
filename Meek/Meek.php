@@ -322,14 +322,17 @@ class Meek {
 		// ****** Prepare
 		$root = $this->web_root;
 		$templates_uri = $this->web_root . $this->TEMPLATES;
+		$pages_uri = $this->web_root . $this->PAGES;
 		
 		// ****** Smart variables parsing
 		/*$out = preg_replace('/\<\$(\w+)\>/', '<?php echo \$$1; ?>', $out); /**/
 		
-		// ****** Relativize link, img and scripts
+		// ****** Relativize for templates: link, scripts
 		$out = preg_replace('/<link(.*)href="(?!http)\/?(.*)"/i', '<link$1href="' . $templates_uri . '$2"', $out);
-		$out = preg_replace('/<img(.*)src="(?!http)\/?(.*)"/i', '<img$1src="' . $templates_uri . '$2"', $out);
 		$out = preg_replace('/<script(.*)src="(?!http)\/?(.*)"/i', '<script$1src="' . $templates_uri . '$2"', $out);
+		
+		// ****** Relativize for pages: img
+		$out = preg_replace('/<img(.*)src="(?!http)\/?(.*)"/i', '<img$1src="' . $pages_uri . '$2"', $out);
 		
 		// ****** Relativize pages navigation
 		$out = preg_replace('/<a(.*)href="(?!http:|https:|mailto:|tel:|skype:)\/?(.*)"/i', '<a$1href="' . $root . '$2"', $out);
