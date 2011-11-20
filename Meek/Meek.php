@@ -83,7 +83,7 @@ class Meek {
   var $cfg = array();
   var $db = array();
   
-  var $renderer = "markdown"; // Rendering modes: "" | "markdown"
+  var $renderer = ""; // Default uses PHP eval. If the file extension is md, switches to Markdown. 
   
   
   function Meek($root = "./") {
@@ -108,6 +108,9 @@ class Meek {
     // ****** Select
     $this->template = $this->select_template($this->local_root . $this->TEMPLATES, $this->virtual_uri);
     $this->page = $this->select_page($this->local_root . $this->PAGES, $this->virtual_uri);
+    
+    // ****** Choose renderer
+    if (pathinfo($this->page, PATHINFO_EXTENSION) == "md") $this->renderer = "markdown";
     
     // ****** Render
     $this->page();
@@ -197,12 +200,14 @@ class Meek {
     		// ****** Read pages hierarchy
     		for ($i = sizeof($virtual_uri); $i > 0; $i--) {
     			$name = join('.', array_slice($virtual_uri, 0, $i));
-    			$path = $pages . $name . '.php';
+    			$path = $pages . $name;
 
-    			if (file_exists($path)) {
-    			  // ****** Got it!
-    			  $out = $path;
+    			if (file_exists($path . '.php')) { // PHP
+    			  $out = $path . '.php';
     			  break;
+    		  } else if (file_exists($path . '.md')) { // Markdown
+    		    $out = $path . '.md';
+    		    break;
     		  }
     	  }
     	  
@@ -259,7 +264,7 @@ class Meek {
   	  
   	  // ****** Select the renderer
   	  if ($this->renderer != '') {
-  	    // *** Addon rendering mode
+  	    // *** Modular rendering mode
   	    include_once "renderer.{$this->renderer}.php";
   	    $libname = ucfirst($this->renderer);
   	    echo $libname($str);
