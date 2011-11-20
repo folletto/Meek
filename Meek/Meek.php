@@ -1,7 +1,7 @@
 <?php
 /*
  * Meek
- * last update: 2011-04-10
+ * last update: 2011-11-20
  * 
  * ==========================================================================================
  * 
@@ -82,6 +82,8 @@ class Meek {
   
   var $cfg = array();
   var $db = array();
+  
+  var $renderer = "markdown"; // Rendering modes: "" | "markdown"
   
   
   function Meek($root = "./") {
@@ -255,8 +257,16 @@ class Meek {
   	  
   	  extract($this->partials); // make previous partials available to following ones
   	  
-  	  eval(' ?' . '>' . $str); // reopening the php tag seems not required...
-  	  
+  	  // ****** Select the renderer
+  	  if ($this->renderer != '') {
+  	    // *** Addon rendering mode
+  	    include_once "renderer.{$this->renderer}.php";
+  	    $libname = ucfirst($this->renderer);
+  	    echo $libname($str);
+  	  } else {
+  	    // *** Default rendering: native PHP
+  	    eval(' ?' . '>' . $str); // reopening the php tag seems not required...
+  	  }
 	  } else {
 	    // ******************************************************************************************
 	    // (1) TEMPLATE RENDERING
@@ -299,7 +309,7 @@ class Meek {
 				$partial_name = $matches[1];
 			} else {
 				// ****** Fill content
-				if ($partial_name !== null && $line !== '')
+				if ($partial_name !== null)
 					$partial_content .= $line . "\n";
 			}
 		}
