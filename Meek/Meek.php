@@ -84,7 +84,7 @@ class Meek {
   var $db = array();
   
   var $renderer = "";
-  var $renderers = array("php", "md"); // Active renderers
+  var $renderers = array("php", "md"); // Active renderers (it will be nice to load them from the folder)
   
   
   function Meek($root = "./") {
