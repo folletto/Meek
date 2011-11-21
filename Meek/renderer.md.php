@@ -11,6 +11,9 @@
 # <http://daringfireball.net/projects/markdown/>
 #
 
+# \/ Meek
+function render_md($str) { return Markdown($str); }
+# /\ Meek
 
 define( 'MARKDOWN_VERSION',  "1.0.1n" ); # Sat 10 Oct 2009
 

@@ -83,7 +83,8 @@ class Meek {
   var $cfg = array();
   var $db = array();
   
-  var $renderer = ""; // Default uses PHP eval. If the file extension is md, switches to Markdown. 
+  var $renderer = "";
+  var $renderers = array("php", "md"); // Active renderers
   
   
   function Meek($root = "./") {
@@ -107,10 +108,10 @@ class Meek {
     
     // ****** Select
     $this->template = $this->select_template($this->local_root . $this->TEMPLATES, $this->virtual_uri);
-    $this->page = $this->select_page($this->local_root . $this->PAGES, $this->virtual_uri);
+    $this->page = $this->select_page($this->local_root . $this->PAGES, $this->virtual_uri, $this->renderers);
     
-    // ****** Choose renderer
-    if (pathinfo($this->page, PATHINFO_EXTENSION) == "md") $this->renderer = "markdown";
+    // ****** Select renderer from extension
+    $this->renderer = pathinfo($this->page, PATHINFO_EXTENSION);
     
     // ****** Render
     $this->page();
@@ -180,17 +181,19 @@ class Meek {
 		
 		return $out;
 	}
-	function select_page($pages, $virtual_uri) {
+	function select_page($pages, $virtual_uri, $extensions = array('php')) {
 	  /****************************************************************************************************
   	 * Select the active page file from implicit file hierarchy.
   	 * Hierarchy:
   	 *    index.php
   	 *    sub.php
-  	 *    sub.sub.php
+  	 *    sub.sub.md
   	 * where all the "sub" parts are from the Virtual URI items.
   	 * In case of failure, it defaults to 404.
   	 *
   	 * @param	  pages folder
+  	 * @param   virtual URL to be matched
+  	 * @param   valid extensions
   	 * @return  choosen page path
   	 */
   	$out = '';
@@ -200,27 +203,38 @@ class Meek {
     		// ****** Read pages hierarchy
     		for ($i = sizeof($virtual_uri); $i > 0; $i--) {
     			$name = join('.', array_slice($virtual_uri, 0, $i));
-    			$path = $pages . $name;
-
-    			if (file_exists($path . '.php')) { // PHP
-    			  $out = $path . '.php';
-    			  break;
-    		  } else if (file_exists($path . '.md')) { // Markdown
-    		    $out = $path . '.md';
-    		    break;
-    		  }
+    			
+    			if (($out = $this->select_file_extension($pages . $name, $extensions)) !== '') break;
     	  }
     	  
     	  if (!$out) {
-    	    // ****** The matching page wasn't found
-    	    $out = $pages . '404.php';
+    	    // ****** The matching page wasn't found, 404
+    	    $out = $this->select_file_extension($pages . '404', $extensions);
     	  }
   		} else {
   		  // ****** Open default
-  		  $out = $pages . 'index.php';
+  		  $out = $this->select_file_extension($pages . 'index', $extensions);
   		}
   	}
 		
+		return $out;
+	}
+	function select_file_extension($path, $extensions = array('php')) {
+	  /****************************************************************************************************
+  	 * Check a file existance for multiple file extensions.
+  	 *
+  	 * @param	  file path without extension
+  	 * @param   extensions array
+  	 * @return  choosen file path with extension
+  	 */
+  	$out = '';
+    foreach ($extensions as $ext) {
+		  if (file_exists($path . '.' . $ext)) {
+		    $out = $path . '.' . $ext;
+		    break 1;
+		  }
+		}
+		//if ($out == '') $path = $path . '.php';
 		return $out;
 	}
 	function page() {
@@ -263,14 +277,21 @@ class Meek {
   	  extract($this->partials); // make previous partials available to following ones
   	  
   	  // ****** Select the renderer
-  	  if ($this->renderer != '') {
+  	  if ($this->renderer == 'php') {
+  	    // *** Default rendering: native PHP
+  	    eval(' ?' . '>' . $str); // reopening the php tag seems not required...  	    
+  	  } else if (file_exists(pathinfo(__FILE__, PATHINFO_DIRNAME) . '/renderer.' . $this->renderer . '.php')) {
   	    // *** Modular rendering mode
   	    include_once "renderer.{$this->renderer}.php";
-  	    $libname = ucfirst($this->renderer);
+  	    $libname = 'render_' . $this->renderer;
   	    echo $libname($str);
   	  } else {
-  	    // *** Default rendering: native PHP
-  	    eval(' ?' . '>' . $str); // reopening the php tag seems not required...
+  	    // *** Something went wrong
+  	    if ($this->renderer) {
+  	      echo "No renderer for file format '" . $this->renderer . "'.";
+	      } else {
+	        echo "Renderer not found.";
+	      }
   	  }
 	  } else {
 	    // ******************************************************************************************
