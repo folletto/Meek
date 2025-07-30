@@ -4,7 +4,7 @@ Meek 0.2
 **Humble template engine for small websites**
 
   <http://intenseminimalism.com>  
-  _Copyright (C) 2011, Davide Casali_  
+  _Copyright (C) 2011, Erin Casali_  
   _Licensed under BSD Opensource License._  
 
 
